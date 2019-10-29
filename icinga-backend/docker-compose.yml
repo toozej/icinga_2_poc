@@ -1,0 +1,71 @@
+version: "3"
+services:
+  icinga-backend:
+    container_name: icinga-backend
+    image: jordan/icinga2:latest
+    hostname: icinga-backend
+    restart: always
+    depends_on:
+      - icinga-mysql
+      - icinga-graphite
+    env_file:
+      - "icinga.env"
+    ports:
+      - "8800:80"
+      - "8801:443"
+      - "8802:5665"
+    labels:
+      - "traefik.frontend.rule=Host:icinga.lab.test"
+      - "traefik.docker.network=traefik"
+    networks:
+      - traefik
+      - icinga-backend
+    volumes:
+      - ./data/icinga/cache:/var/cache/icinga2
+      - ./data/icinga/certs:/etc/apache2/ssl
+      - ./data/icinga/etc/icinga2:/etc/icinga2
+      - ./data/icinga/etc/icingaweb2:/etc/icingaweb2
+      - ./data/icinga/lib/icinga:/var/lib/icinga2
+      - ./data/icinga/lib/php/sessions:/var/lib/php/sessions
+      - ./data/icinga/log/apache2:/var/log/apache2
+      - ./data/icinga/log/icinga2:/var/log/icinga2
+      - ./data/icinga/log/icingaweb2:/var/log/icingaweb2
+      - ./data/icinga/log/mysql:/var/log/mysql
+      - ./data/icinga/spool:/var/spool/icinga2
+
+  icinga-graphite:
+    image: graphiteapp/graphite-statsd:latest
+    container_name: icinga-graphite
+    restart: always
+    hostname: icinga-graphite
+    networks:
+      - icinga-backend
+    volumes:
+      - ./data/graphite/conf:/opt/graphite/conf
+      - ./data/graphite/storage:/opt/graphite/storage
+      - ./data/graphite/log/graphite:/var/log/graphite
+      - ./data/graphite/log/carbon:/var/log/carbon
+    labels:
+      - "traefik.enable=false"
+
+  icinga-mysql:
+    image: mariadb:10.1
+    container_name: icinga-mysql
+    hostname: icinga-mysql
+    restart: always
+    env_file:
+      - "mysql.env"
+    networks:
+      - icinga-backend
+    volumes:
+      - ./data/mysql/data:/var/lib/mysql
+    labels:
+      - "traefik.enable=false"
+
+networks:
+  traefik:
+    external:
+      name: traefik
+  icinga-backend:
+    external:
+      name: icinga-backend

@@ -1,0 +1,32 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+$script = <<SCRIPT
+yum install -y epel-release
+yum install -y nrpe nagios-plugins-all 
+SCRIPT
+
+$script2 = <<SCRIPT
+mv /tmp/nrpe.cfg /etc/nagios/nrpe.cfg
+chmod 0644 /etc/nagios/nrpe.cfg
+service nrpe start
+SCRIPT
+
+Vagrant.configure(2) do |config|
+  config.vm.box = "centos/7"
+
+  config.vm.network "private_network", ip: "192.168.58.102"
+
+  config.vm.hostname = "centos7"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "2048"
+    vb.customize [ "guestproperty", "set", :id, "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000 ]
+  end
+
+  config.ssh.forward_agent = true
+
+  config.vm.provision "shell", inline: $script
+  config.vm.provision "file", source: "./nrpe.cfg", destination: "/tmp/nrpe.cfg"
+  config.vm.provision "shell", inline: $script2
+end
